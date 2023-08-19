@@ -10,7 +10,7 @@ parameters.append(input('Enter Number of Audio Channels to record: '))
 
 print(parameters)
 
-f = open('Config/settings.conf', 'w')
+f = open('Config/audio_settings.conf', 'w')
 for param in parameters:
     f.write(param + '\n')
 f.close()
