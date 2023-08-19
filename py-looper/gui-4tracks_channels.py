@@ -16,7 +16,7 @@ VERSION = "v1.0.0"
 #Config Files
 GUI_CONF = 'gui.conf'
 CHANNELS_CONF = 'channels_to_tracks.conf'
-MIDI_CONF = 'midi_commands.co'
+MIDI_CONF = 'midi_commands.conf'
 
 #track states
 S_PLAY = 0
