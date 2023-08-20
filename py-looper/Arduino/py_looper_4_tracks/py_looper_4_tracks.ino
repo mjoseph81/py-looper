@@ -30,7 +30,7 @@ const uint8_t playLED       = 42;
 
 
 //array for the button pins
-const uint8_t buttons[NUM_BUTTONS] = {btn_reset, btn_clear, btn_rec_play, btn_mult_stop, btn_track1, btn_track2, btn_track3, btn_track4};
+const uint8_t buttons[NUM_BUTTONS] = {btn_mode, btn_reset, btn_clear, btn_rec_play, btn_mult_stop, btn_track1, btn_track2, btn_track3, btn_track4};
 
 //MIDI values for each button
 const uint8_t btn_press_cmd[NUM_BUTTONS] = {90, 91, 92, 93, 94, 95, 96, 97, 98};
