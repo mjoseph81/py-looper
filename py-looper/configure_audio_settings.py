@@ -1,3 +1,20 @@
+'''
+ /* 
+ *  FILE    :   configure_audio_settings.py
+ *  AUTHOR  :   Matt Joseph
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
+ *  
+ *
+ *  DESCRIPTION
+ *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  
+ *  
+ *  
+ *  REV HISTORY
+ *  1.0.0)  Initial release
+'''
+
 parameters = []
 
 parameters.append(input('Enter Sample Rate in Hz (Safe Choices 44100 and 48000): '))

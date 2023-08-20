@@ -1,8 +1,25 @@
+'''
+ /* 
+ *  FILE    :   get_latency.py
+ *  AUTHOR  :   Matt Joseph
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
+ *  
+ *
+ *  DESCRIPTION
+ *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  
+ *  
+ *  
+ *  REV HISTORY
+ *  1.0.0)  Initial release
+'''
+
 import pyaudio
 import numpy as np
 import time
 
-settings_file = open('Config/settings.prt', 'r')
+settings_file = open('Config/audio_settings.conf', 'r')
 parameters = settings_file.readlines()
 settings_file.close()
 
@@ -20,11 +37,11 @@ pa = pyaudio.PyAudio()
 
 silence = np.zeros(CHUNK, dtype = np.int16)
 
-cos_arr = np.empty(CHUNK, dtype = np.float)                         #to store values of cos(i omega) at all relevant i
+cos_arr = np.empty(CHUNK, dtype = float)                         #to store values of cos(i omega) at all relevant i
 for i in range(CHUNK):
     cos_arr[i] = np.cos(click_ang_fr * i)
 
-sin_arr = np.empty(CHUNK, dtype = np.float)                         #to store values of sin
+sin_arr = np.empty(CHUNK, dtype = float)                         #to store values of sin
 for i in range(CHUNK):
     sin_arr[i] = np.sin(click_ang_fr * i)
 
@@ -83,7 +100,8 @@ test_stream = pa.open(
     stream_callback = test_callback
 )
 
-print('Make sure any hardware monitoring is turned OFF and hold speaker and microphone close together.')
+print('Make sure any hardware monitoring is turned OFF.')
+print('Connect one of the output channels to one of the input channels on your audio interface.')
 
 test_stream.start_stream()
 
@@ -129,16 +147,16 @@ if (confidence > 6): #test for statistical significance
     print('Measured latency is ' + str(clickest_buffer) + ' buffers with buffer size ' + str(CHUNK) + ' at sample rate ' + str(RATE / 1000) + 'kHz')
     print('i.e. about ' + str(latency_in_milliseconds) + ' milliseconds.')
     if (input('Set measured value as latency value for looping? (y/n): ') == 'y'):
-        settings_file = open('Config/settings.prt', 'r')
+        settings_file = open('Config/audio_settings.conf', 'r')
         parameters = settings_file.readlines()
         settings_file.close()
-        settings_file = open('Config/settings.prt', 'w')
         parameters[2] = str(latency_in_milliseconds) + '\n'
-        for i in range(6):
-            settings_file.write(parameters[i])
-        settings_file.close()
+        f = open('Config/audio_settings.conf', 'w')
+        for param in parameters:
+            f.write(param )
+        f.close()
         print('Done.')
 else:
-    print('Test not conclusive, please\na) Move mic and speaker closer together\nb) Turn up volume\nc) Move to a quieter location')
+    print('Test not conclusive, please retry.')
 
 input('Press Enter')

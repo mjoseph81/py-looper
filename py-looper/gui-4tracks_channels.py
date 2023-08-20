@@ -1,3 +1,20 @@
+'''
+ /* 
+ *  FILE    :   gui-4tracks_channels.py
+ *  AUTHOR  :   Matt Joseph
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
+ *  
+ *
+ *  DESCRIPTION
+ *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  
+ *  
+ *  
+ *  REV HISTORY
+ *  1.0.0)  Initial release
+'''
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import *
@@ -16,7 +33,7 @@ VERSION = "v1.0.0"
 #Config Files
 GUI_CONF = 'gui.conf'
 CHANNELS_CONF = 'channels_to_tracks.conf'
-MIDI_CONF = 'midi_commands.conf'
+MIDI_CONF = 'midi_commands.co'
 
 #track states
 S_PLAY = 0

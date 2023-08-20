@@ -1,3 +1,20 @@
+'''
+ /* 
+ *  FILE    :   configure_channels_to_tracks.py
+ *  AUTHOR  :   Matt Joseph
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
+ *  
+ *
+ *  DESCRIPTION
+ *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  
+ *  
+ *  
+ *  REV HISTORY
+ *  1.0.0)  Initial release
+'''
+
 f = open('Config/channels_to_tracks.conf', 'r')
 parameters = f.readlines()
 while (len(parameters) < 4):
@@ -12,6 +29,6 @@ parameters[3] = input('Enter channels to map to track 4 (separate with comma): '
 print(parameters)
 
 f = open('Config/channels_to_tracks.conf', 'w')
-for i in range(4):
-    f.write(parameters[i] + '\n')
+for param in parameters:
+    f.write(param + '\n')
 f.close()

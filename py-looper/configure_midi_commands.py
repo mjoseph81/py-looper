@@ -1,9 +1,26 @@
+'''
+ /* 
+ *  FILE    :   configure_midi_commands.py
+ *  AUTHOR  :   Matt Joseph
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
+ *  
+ *
+ *  DESCRIPTION
+ *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  
+ *  
+ *  
+ *  REV HISTORY
+ *  1.0.0)  Initial release
+'''
+
 parameters = []
 
 parameters.append(input('Enter MIDI Control Number for MODE: '))
 parameters.append(input('Enter MIDI Control Number for RESET: '))
 parameters.append(input('Enter MIDI Control Number for CLEAR: '))
-parameters.append(input('Enter MIDI Control Number for REC/PLAY): '))
+parameters.append(input('Enter MIDI Control Number for REC/PLAY: '))
 parameters.append(input('Enter MIDI Control Number for STOP: '))
 parameters.append(input('Enter MIDI Control Number for TRACK 1: '))
 parameters.append(input('Enter MIDI Control Number for TRACK 2: '))
