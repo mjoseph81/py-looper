@@ -7,7 +7,7 @@
  *  
  *
  *  DESCRIPTION
- *  https://www.instructables.com/id/DIY-Chewie-Monsta-Looper-Based-on-Ed-Sheerans/
+ *  https://www.instructables.com/Py-Looper/
  *  
  *  
  *  
