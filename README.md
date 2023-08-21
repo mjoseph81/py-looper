@@ -2,4 +2,4 @@
 Audio Looping Software written in Python
 
 
-******NOT DONE UPLOADING FILES YET*****
+Visit https://www.instructables.com/Py-Looper/ for full details
