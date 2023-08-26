@@ -1172,7 +1172,7 @@ def read_midi():
 		send_midi(12, LED_T2)
 		send_midi(13, LED_T3)
 		send_midi(14, LED_T4)
-		''''
+		'''
 
 def send_midi(ctrl_num, value):
 	cc = ControlChange(ctrl_num, value)
