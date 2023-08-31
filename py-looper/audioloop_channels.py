@@ -2,8 +2,8 @@
  /* 
  *  FILE    :   audioloop_channels.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   8/17/2023
- *  VERSION :   1.0.0
+ *  DATE    :   8/25/2023
+ *  VERSION :   1.0.1
  *  
  *
  *  DESCRIPTION

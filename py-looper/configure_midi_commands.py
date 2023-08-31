@@ -2,8 +2,8 @@
  /* 
  *  FILE    :   configure_midi_commands.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   8/17/2023
- *  VERSION :   1.0.0
+ *  DATE    :   8/29/2023
+ *  VERSION :   1.1.0
  *  
  *
  *  DESCRIPTION
@@ -13,6 +13,7 @@
  *  
  *  REV HISTORY
  *  1.0.0)  Initial release
+ *  1.1.0)  Added option to enable/disable LEDs
 '''
 
 parameters = []
@@ -27,6 +28,7 @@ parameters.append(input('Enter MIDI Control Number for TRACK 2: '))
 parameters.append(input('Enter MIDI Control Number for TRACK 3: '))
 parameters.append(input('Enter MIDI Control Number for TRACK 4: '))
 parameters.append(input('Enter COM Port for MIDI device (Ex. /dev/ttyACM0) : '))
+parameters.append(input('Enable support for MODE & TRACK LEDs? (YES or NO) : '))
 
 print(parameters)
 
