@@ -2,8 +2,8 @@
  /* 
  *  FILE    :   configure_midi_commands.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   8/29/2023
- *  VERSION :   1.1.0
+ *  DATE    :   8/30/2023
+ *  VERSION :   1.2.0
  *  
  *
  *  DESCRIPTION
@@ -14,12 +14,14 @@
  *  REV HISTORY
  *  1.0.0)  Initial release
  *  1.1.0)  Added option to enable/disable LEDs
+ *  1.2.0)  Added support for UNDO function
 '''
 
 parameters = []
 
 parameters.append(input('Enter MIDI Control Number for MODE: '))
 parameters.append(input('Enter MIDI Control Number for RESET: '))
+parameters.append(input('Enter MIDI Control Number for UNDO: '))
 parameters.append(input('Enter MIDI Control Number for CLEAR: '))
 parameters.append(input('Enter MIDI Control Number for REC/PLAY: '))
 parameters.append(input('Enter MIDI Control Number for STOP: '))

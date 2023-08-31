@@ -2,8 +2,8 @@
  /* 
  *  FILE    :   audioloop_channels.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   8/25/2023
- *  VERSION :   1.0.1
+ *  DATE    :   8/30/2023
+ *  VERSION :   1.2.0
  *  
  *
  *  DESCRIPTION
@@ -13,6 +13,7 @@
  *  
  *  REV HISTORY
  *  1.0.0)  Initial release
+ *  1.2.0)  added multiple buffers for each layer to support UNDO
 '''
 
 import pyaudio
@@ -56,7 +57,7 @@ MAXLENGTH = int(12582912 / CHUNK) #96mb of audio in total
 SAMPLEMAX = 0.9 * (2**15) #maximum possible value for an audio sample (little bit of margin)
 LENGTH = 0 #length of the first recording on track 1, all subsequent recordings quantized to a multiple of this.
 
-
+LAYERS = 16 #support a max of 16 overdub layers per track
 debounce_length = 0.1 #length in seconds of button debounce period
 
 silence = np.zeros([CHUNK], dtype = np.int16) #a buffer containing silence
@@ -81,8 +82,11 @@ class audioloop:
         self.initialized = False
         self.length_factor = 1
         self.length = 0
+        self.layer = 0
         #self.audio is a 2D array of samples, each row is a buffer's worth of audio
         self.audio = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
+        #self.audio is a 3D array of layers of samples, each row is a buffer's worth of audio
+        self.audio_layers = np.zeros([LAYERS, MAXLENGTH, CHUNK], dtype = np.int16)
         self.readp = 0
         self.writep = 0
         self.isrecording = False
@@ -103,6 +107,7 @@ class audioloop:
         self.loop_length = 0
         self.channels = []
         self.ch_match_list = []
+
         
     #Sets channels that will be used for the loop
     def set_channels(self, channels):
@@ -112,9 +117,7 @@ class audioloop:
         for x in CH_LIST:
             self.ch_match_list.append(x in s2)
         
-        #print('CH_LIST: ', CH_LIST)
-        #print('self.channels: ', self.channels)
-        #print('self.ch_match_list: ', self.ch_match_list) 
+
         
     #incptrs() increments pointers and, when restarting while recording, advances dub ratio
     def incptrs(self):
@@ -122,10 +125,14 @@ class audioloop:
             self.readp = 0
             if self.isrecording:
                 self.dub_ratio = self.dub_ratio * 0.9
+                self.layer += 1
                 print(self.dub_ratio)
+                
         else:
             self.readp = self.readp + 1
         self.writep = (self.writep + 1) % self.length
+    
+    
     #initialize() raises self.length to closest integer multiple of LENGTH and initializes read and write pointers
     def initialize(self):
         print('initialize called')
@@ -154,48 +161,18 @@ class audioloop:
         #debounce flags
         self.rec_just_pressed = False
         self.play_just_pressed = False
+    
+    
     #add_buffer() appends a new buffer unless loop is filled to MAXLENGTH
     #expected to only be called before initialization
-    def add_buffer(self, data):
+    def add_buffer(self, data, overdub):
         if self.length >= (MAXLENGTH - 1):
             self.length = 0
             print('loop full')
             return
-
-        buff = data
-        #check if a channel is not mapped to the loop
-        #if not then set the samples for that channel to zero
-        for n in range(0, CHANNELS):
-            if self.ch_match_list[n] == False:
-                #samples are interleaved, so start at offset based on the channel and step "num of channels" until the end of the samples
-                for m in range(int(CH_LIST[n])-1,CHUNK,CHANNELS):
-                    buff[m] = 0
-                
-        self.audio[self.length, :] = np.copy(buff)
-        self.length = self.length + 1
-    
-    def is_restarting(self):
-        if not self.initialized:
-            return False
-        if self.readp == 0:
-            return True
-        return False
-    #read() reads and returns a buffer of audio from the loop
-    def read(self):
-        #if not initialized do nothing
-        if not self.initialized:
-            return(silence)
-        #if initialized but muted just increment pointers
-        if not self.isplaying:
-            self.incptrs()
-            return(silence)
-        #if initialized and playing, read audio from the loop and increment pointers
-        tmp = self.readp
-        self.incptrs()
-        return(self.audio[tmp, :])
-    #dub() mixes an incoming buffer of audio with the one at writep
-    def dub(self, data, fade_in = False, fade_out = False):
-        if not self.initialized:
+        
+        #check if max layers have been filled
+        if self.layer == LAYERS-1:
             return
         
         buff = data
@@ -206,12 +183,68 @@ class audioloop:
                 #samples are interleaved, so start at offset based on the channel and step "num of channels" until the end of the samples
                 for m in range(int(CH_LIST[n])-1,CHUNK,CHANNELS):
                     buff[m] = 0
-                    
-        datadump = np.copy(buff)
-        self.audio[self.writep, :] = self.audio[self.writep, :] * 0.9 + datadump[:] * self.dub_ratio
-    #clear() clears the loop so that a new loop of the same or a different length can be recorded on the track
+        
+        
+        if overdub == False:
+            #if not in overdub then add buffer and increment the length counter
+            self.audio_layers[self.layer, self.length, :] = np.copy(buff)
+            self.length = self.length + 1
+        else:
+            #if in overdub then add buffer at writep position and mult. by the dub ratio
+            self.audio_layers[self.layer, self.writep, :] = np.copy(buff) * self.dub_ratio
+
+    
+    def is_restarting(self):
+        if not self.initialized:
+            return False
+        if self.readp == 0:
+            return True
+        return False
+    
+    
+    #read() reads and returns a buffer of audio from the loop
+    def read(self):
+        #if not initialized do nothing
+        if not self.initialized:
+            print('read - not init')
+            return(silence)
+        #if initialized but muted just increment pointers
+        if not self.isplaying:
+            print('read - not playing')
+            self.incptrs()
+            return(silence)
+        #if initialized and playing, read audio from the loop and increment pointers
+        tmp = self.readp
+        self.incptrs()
+        #combine all layers for position and write to audio buffer
+        self.combine_layers(tmp)
+        return(self.audio[tmp, :])
+    
+    
+    #combine_layers() mixes all the layers for the loop into a single buffer for playback at the specified index
+    def combine_layers(self, index):
+        if not self.initialized:
+            return
+
+        #clear current position in audio buffer
+        self.audio[index, :] = np.zeros([CHUNK], dtype = np.int16)  
+        tmp_buff = np.zeros([CHUNK], dtype = np.int16)
+       
+        
+        #loop through layers, combine, and write to audio buffer for playback
+        for n in range(self.layer): 
+            tmp_buff =  (tmp_buff) + (self.audio_layers[n, index, :])
+
+        self.audio[index, :] =  tmp_buff   
+        #self.audio[index, :] = np.multiply((
+        #                 tmp_buff.astype(np.int32)[:]
+        #                 ), output_volume, out= None, casting = 'unsafe').astype(np.int16)
+    
+    
+    #clear() clears the loop and sets back to the init state (only called with RESET)
     def clear(self):
         self.audio = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
+        self.audio_layers = np.zeros([LAYERS, MAXLENGTH, CHUNK], dtype = np.int16)
         self.initialized = False
         self.isplaying = False
         self.isrecording = False
@@ -227,25 +260,29 @@ class audioloop:
         self.peak_vol = 0
         self.loop_length = 0
         self.dub_ratio = 1.0
+        self.layer = 0
+        
+    #undo() removes last layer from the audio_layers buffer
+    def undo(self):
+        self.audio_layers[self.layer, :, :] = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
+        self.layer -= 1
+    
+    
     def start_recording(self, previous_buffer):
         self.isrecording = True
         self.iswaiting = False
         self.preceding_buffer = np.copy(previous_buffer)
         self.record = True
+    
+    
     #Doubles the length of the loop and copies the contents
     def instant_multiply(self):
         #Track length can't be more than half the MAXLENGTH in order to multiply
         if self.length <= (MAXLENGTH/2)-1:
-            for n in range(self.length):
-                self.audio[n+self.length, :] = self.audio[n, :]
-            self.length += self.length
+            for m in range(self.layer):
+                for n in range(self.length):
+                    self.audio_layers[m, n+self.length, :] = self.audio_layers[m, n, :]
+                self.length += self.length
         else:
             print('Loop exceeds max length to multiply')
-    def bouncewait_rec(self):
-        self.rec_just_pressed = True
-        time.sleep(debounce_length)
-        self.rec_just_pressed = False
-    def bouncewait_play(self):
-        self.play_just_pressed = True
-        time.sleep(debounce_length)
-        self.play_just_pressed = False
+
