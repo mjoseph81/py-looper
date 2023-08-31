@@ -1,9 +1,9 @@
 '''
  /* 
- *  FILE    :   py-looper_v1.0.1.py
+ *  FILE    :   py-looper.py
  *  AUTHOR  :   Matt Joseph
  *  DATE    :   8/25/2023
- *  VERSION :   1.0.1
+ *  VERSION :   1.1.0
  *  
  *
  *  DESCRIPTION
@@ -14,6 +14,7 @@
  *  REV HISTORY
  *  1.0.0)  Initial release
  *  1.0.1)  Converted RMS vol to DB so GUI is smoother
+ *  1.1.0)  Added support to send serial message with LED state info ****Requires Arduino version 1.1.0 or newer****
 '''
 
 import tkinter as tk
@@ -30,9 +31,10 @@ from midi import ControlChange
 from midi import Message
 import audioop
 from math import log10
+import serial
 
 #App Version
-VERSION = "v1.0.1"
+VERSION = "v1.0.0"
 
 #Config Files
 GUI_CONF = 'gui.conf'
@@ -85,6 +87,7 @@ frame_width = 0
 frame_height = 0
 peak = 0
 usingMIDI = False
+supportLEDs = False
 
 #Check if conf file for MIDI bindings is present and load them
 #If file does not exist then disable MIDI connection
@@ -107,6 +110,19 @@ if os.path.exists('Config/'+MIDI_CONF):
 	MIDI_T3 = int(parameters[7]) 
 	MIDI_T4 = int(parameters[8]) 
 	COM_PORT = str(parameters[9]).strip("\r\n")
+	USE_LEDS = str(parameters[10]).strip("\r\n")
+	
+	if USE_LEDS != 'YES' and USE_LEDS != 'NO':
+		print('Invalid input for LED support parameter, defaulting to disable LEDs.')
+		USE_LEDS = 'NO'
+	else:
+		if USE_LEDS == 'YES':
+			supportLEDs = True
+			print('LED support enabled')
+		else:
+			suportLEDs = False
+			
+		
 	print('MIDI configured')
 else:
 	usingMIDI = False
@@ -161,7 +177,7 @@ else:
 	NUM_TRACKS = 4
 	DISPLAY_BUTTONS = 'YES'
 	
-	
+#create instance of PyAudio	
 pa = pyaudio.PyAudio()
 
 class Track(tk.Tk):
@@ -335,6 +351,7 @@ class Track(tk.Tk):
 		global setup_isrecording, setup_donerecording
 		global prev_rec_buffer, play_buffer
 		global peak, output_volume, activeTrack
+		global LED_T1, LED_T2, LED_T3, LED_T4
 		
 		print("Reset pressed")
 		#clear all loops
@@ -345,6 +362,11 @@ class Track(tk.Tk):
 		for n in tracks:
 			trackState[n-1] = S_PLAY
 			self.update_volume_bar(n)
+			
+		LED_T1 = 0				
+		LED_T2 = 0
+		LED_T3 = 0
+		LED_T4 = 0
 		
 		#clear global variables
 		#mode = M_PLAY
@@ -605,11 +627,13 @@ class Track(tk.Tk):
 		
 		if isRunning == 1:
 			#get position of each track
-			track_1_pos = loops[0].readp
-			track_2_pos = loops[1].readp
-			track_3_pos = loops[2].readp
-			track_4_pos = loops[3].readp
-
+			track_1_pos = loops[0].readp-1
+			track_2_pos = loops[1].readp-1
+			track_3_pos = loops[2].readp-1
+			track_4_pos = loops[3].readp-1
+		
+			#calc number of samples per 50ms refresh time
+			samp_per_int = looper.RATE / 50
 			
 			#get amplitude of each track for the current position
 			track_1_data = np.max(np.abs(loops[0].audio.astype(np.int32)[track_1_pos][:]))
@@ -647,7 +671,7 @@ class Track(tk.Tk):
 				track_4_vol = 20 * log10(track_4_rms)
 				
 		
-			max_db = 120
+			peak = 100
 					
 
 			'''
@@ -663,27 +687,27 @@ class Track(tk.Tk):
 			self.track1loop["value"] = track_1_pos
 			self.track1loop["maximum"] =loops[0].length
 			self.track1vol["value"] = track_1_vol
-			self.track1vol["maximum"] = max_db
+			self.track1vol["maximum"] = peak
 
 			#track 2
 			self.track2loop["value"] = track_2_pos
 			self.track2loop["maximum"] =loops[1].length
 			self.track2vol["value"] = track_2_vol
-			self.track2vol["maximum"] = max_db
+			self.track2vol["maximum"] = peak
 
 			if NUM_TRACKS >= 3:
 				#track 3
 				self.track3loop["value"] = track_3_pos
 				self.track3loop["maximum"] =loops[2].length
 				self.track3vol["value"] = track_3_vol
-				self.track3vol["maximum"] = max_db
+				self.track3vol["maximum"] = peak
 			
 			if NUM_TRACKS == 4:
 				#track 4
 				self.track4loop["value"] = track_4_pos
 				self.track4loop["maximum"] =loops[3].length
 				self.track4vol["value"] = track_4_vol
-				self.track4vol["maximum"] = max_db
+				self.track4vol["maximum"] = peak
 			
 			
 
@@ -1139,55 +1163,63 @@ def finish():
 #restart_looper() restarts this python script
 def restart_looper():
     pa.terminate() #needed to free audio device for reuse
-    os.execlp('python3', 'python3', 'py-looper_v1.0.1.py') #replaces current process with a new instance of the same script
+    os.execlp('python3', 'python3', 'gui-4tracks.py') #replaces current process with a new instance of the same script
 
 
 #Method that runs on a separate thread to wait and read incoming MIDI commands
 def read_midi():
 	while True:
-		msg = conn.read()  # read on ANY channel by default
-		print(msg.control_number)
-		if msg.control_number == MIDI_MODE:
-			app.toggleMode()
-		elif msg.control_number == MIDI_RESET:
-			app.reset()
-		elif msg.control_number == MIDI_CLEAR:
-			app.clear_track()
-		elif msg.control_number == MIDI_RECPLAY:
-			app.playRec()
-		elif msg.control_number == MIDI_STOP:
-			app.stop()
-		elif msg.control_number == MIDI_T1:
-			app.track_press(1)
-		elif msg.control_number == MIDI_T2:
-			app.track_press(2)
-		elif msg.control_number == MIDI_T3:
-			app.track_press(3)
-		elif msg.control_number == MIDI_T4:
-			app.track_press(4)
-		
-		'''
-		send_midi(10, LED_MODE)
-		send_midi(11, LED_T1)
-		send_midi(12, LED_T2)
-		send_midi(13, LED_T3)
-		send_midi(14, LED_T4)
-		'''
+		while conn.in_waiting:
+			rx_msg = conn.read(3)
+			cc = rx_msg[1]
+			print(cc)
+			if cc == MIDI_MODE:
+				app.toggleMode()
+			elif cc == MIDI_RESET:
+				app.reset()
+			elif cc == MIDI_CLEAR:
+				app.clear_track()
+			elif cc == MIDI_RECPLAY:
+				app.playRec()
+			elif cc == MIDI_STOP:
+				app.stop()
+			elif cc == MIDI_T1:
+				app.track_press(1)
+			elif cc == MIDI_T2:
+				app.track_press(2)
+			elif cc == MIDI_T3:
+				app.track_press(3)
+			elif cc == MIDI_T4:
+				app.track_press(4)
+			
+			if supportLEDs == True:
+				tx_msg = build_led_msg()
+				send_midi(tx_msg)
 
-def send_midi(ctrl_num, value):
-	cc = ControlChange(ctrl_num, value)
-	msg = Message(cc, channel=1)
-	conn.write(msg)
+
+def build_led_msg():
+	led_track_byte = LED_T1  | (LED_T2 << 2) | (LED_T3 << 4) | (LED_T4 << 6)
+	msg = [0xB0, 10, LED_MODE, led_track_byte]
+	print(msg[0],':', msg[1], ':',f'{msg[2]:08b}', ':',f'{msg[3]:08b}')
+
+	return msg
+	
+def send_midi(msg):
+	conn.write(serial.to_bytes(msg))
 	
 	
 if usingMIDI == True:
-	#open the COM port for the midi device
-	conn = MidiConnector(COM_PORT)
+	try:
+		#open the COM port for the midi device
+		conn = serial.Serial(COM_PORT, 31250, timeout=0.5)
 
-	#Define a new thread and link it to 'read_midi' method so that GUI is not blocked
-	midi_thread = threading.Thread(target=read_midi)
-	midi_thread.setDaemon(True)
-	midi_thread.start()
+		#Define a new thread and link it to 'read_midi' method so that GUI is not blocked
+		midi_thread = threading.Thread(target=read_midi)
+		midi_thread.setDaemon(True)
+		midi_thread.start()
+	except:
+		print('Error opening COM port. Disabling MIDI interface')
+		usingMIDI = False
 
 app.mainloop()
 
