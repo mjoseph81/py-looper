@@ -1,9 +1,9 @@
 '''
  /* 
- *  FILE    :   py-looper.py
+ *  FILE    :   gui-4tracks_channels.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   8/30/2023
- *  VERSION :   1.2.0
+ *  DATE    :   8/17/2023
+ *  VERSION :   1.0.0
  *  
  *
  *  DESCRIPTION
@@ -13,9 +13,6 @@
  *  
  *  REV HISTORY
  *  1.0.0)  Initial release
- *  1.0.1)  Converted RMS vol to DB so GUI is smoother
- *  1.1.0)  Added support to send serial message with LED state info ****Requires Arduino version 1.1.0 or newer****
- *  1.2.0)  Added support for "UNDO" function  ****Requires Arduino version 1.2.0 or newer****
 '''
 
 import tkinter as tk
@@ -31,11 +28,9 @@ from midi import MidiConnector
 from midi import ControlChange
 from midi import Message
 import audioop
-from math import log10
-import serial
 
 #App Version
-VERSION = "v1.2.0"
+VERSION = "v1.0.0"
 
 #Config Files
 GUI_CONF = 'gui.conf'
@@ -65,7 +60,7 @@ LED_RED = 2
 LED_AMBER = 3
 
 #LEDs
-LED_MODE = 1				
+LED_MODE = 0				
 LED_T1 = 0				
 LED_T2 = 0
 LED_T3 = 0
@@ -88,7 +83,6 @@ frame_width = 0
 frame_height = 0
 peak = 0
 usingMIDI = False
-supportLEDs = False
 
 #Check if conf file for MIDI bindings is present and load them
 #If file does not exist then disable MIDI connection
@@ -102,29 +96,15 @@ if os.path.exists('Config/'+MIDI_CONF):
 
 	#Set MIDI Control Numbers
 	MIDI_MODE = int(parameters[0])
-	MIDI_RESET = int(parameters[1])
-	MIDI_UNDO = int(parameters[2])
-	MIDI_CLEAR = int(parameters[3]) 
-	MIDI_RECPLAY = int(parameters[4]) 
-	MIDI_STOP = int(parameters[5]) 
-	MIDI_T1 = int(parameters[6]) 
-	MIDI_T2 = int(parameters[7]) 
-	MIDI_T3 = int(parameters[8]) 
-	MIDI_T4 = int(parameters[9]) 
-	COM_PORT = str(parameters[10]).strip("\r\n")
-	USE_LEDS = str(parameters[11]).strip("\r\n")
-	
-	if USE_LEDS != 'YES' and USE_LEDS != 'NO':
-		print('Invalid input for LED support parameter, defaulting to disable LEDs.')
-		USE_LEDS = 'NO'
-	else:
-		if USE_LEDS == 'YES':
-			supportLEDs = True
-			print('LED support enabled')
-		else:
-			suportLEDs = False
-			
-		
+	MIDI_RESET = int(parameters[1]) 
+	MIDI_CLEAR = int(parameters[2]) 
+	MIDI_RECPLAY = int(parameters[3]) 
+	MIDI_STOP = int(parameters[4]) 
+	MIDI_T1 = int(parameters[5]) 
+	MIDI_T2 = int(parameters[6]) 
+	MIDI_T3 = int(parameters[7]) 
+	MIDI_T4 = int(parameters[8]) 
+	COM_PORT = str(parameters[9]).strip("\r\n")
 	print('MIDI configured')
 else:
 	usingMIDI = False
@@ -179,10 +159,9 @@ else:
 	NUM_TRACKS = 4
 	DISPLAY_BUTTONS = 'YES'
 	
-#create instance of PyAudio	
+	
 pa = pyaudio.PyAudio()
 
-#Class for GUI
 class Track(tk.Tk):
 	
 	def __init__(self, *args, **kwargs):
@@ -256,15 +235,11 @@ class Track(tk.Tk):
 		
 		#Create a Mode label
 		self.lblMode = tk.Label(cntl_frame, text= "PLAY", fg="green", bg="black", font=("Arial Bold", 36))
-		self.lblMode.pack(pady=20)
+		self.lblMode.pack(pady=30)
 		
 		#Create a Active Track label
 		self.lblTrack = tk.Label(cntl_frame, text= "TRACK 1", fg="yellow", bg="black", font=("Arial Bold", 36))
-		self.lblTrack.pack(pady=20)
-		
-		#Create a Active Layer label
-		self.lblLayer = tk.Label(cntl_frame, text= "LAYER", fg="yellow", bg="black", font=("Arial Bold", 36))
-		self.lblLayer.pack(pady=20)
+		self.lblTrack.pack(pady=30)
 
 		if DISPLAY_BUTTONS == 'YES':
 			#Create REC/PLAY button
@@ -279,20 +254,16 @@ class Track(tk.Tk):
 			self.btnMode = ttk.Button(cntl_frame,text="MODE", command=self.toggleMode)
 			self.btnMode.pack(pady=5)
 
-			#Create UNDO button
-			self.btnUndo = ttk.Button(cntl_frame,text="UNDO", command=self.undo_track)
-			self.btnUndo.pack(pady=5)
-			
 			#Create CLEAR button
-			self.btnClear = ttk.Button(cntl_frame,text="CLEAR", command=self.clear_track)
-			self.btnClear.pack(pady=5)
+			self.btnMode = ttk.Button(cntl_frame,text="CLEAR", command=self.clear_track)
+			self.btnMode.pack(pady=5)
 
 			#Create RESET button
 			self.btnReset = ttk.Button(cntl_frame,text="RESET", command=self.reset)
 			self.btnReset.pack(pady=5)
+		
+		
 
-		
-		
 		#track 1 column
 		self.track1loop = ttk.Progressbar(tr1_frame, style="gray1.Horizontal.TProgressbar", orient="horizontal", length=frame_width-10, mode="determinate")
 		self.track1loop.pack(padx=5)
@@ -362,7 +333,6 @@ class Track(tk.Tk):
 		global setup_isrecording, setup_donerecording
 		global prev_rec_buffer, play_buffer
 		global peak, output_volume, activeTrack
-		global LED_T1, LED_T2, LED_T3, LED_T4
 		
 		print("Reset pressed")
 		#clear all loops
@@ -374,12 +344,8 @@ class Track(tk.Tk):
 			trackState[n-1] = S_PLAY
 			self.update_volume_bar(n)
 		
-		LED_T1 = 0				
-		LED_T2 = 0
-		LED_T3 = 0
-		LED_T4 = 0
-
 		#clear global variables
+		#mode = M_PLAY
 		looper.LENGTH = 0
 		isRunning = False
 		setup_isrecording = False 
@@ -634,65 +600,62 @@ class Track(tk.Tk):
 		global isRunnning
 		global tracks
 		global peak
-		global activeTrack
-		
-		trackIndex = activeTrack -1
 		
 		if isRunning == 1:
 			#get position of each track
-			track_1_pos = loops[0].readp-1
-			track_2_pos = loops[1].readp-1
-			track_3_pos = loops[2].readp-1
-			track_4_pos = loops[3].readp-1
+			track_1_pos = loops[0].readp
+			track_2_pos = loops[1].readp
+			track_3_pos = loops[2].readp
+			track_4_pos = loops[3].readp
 		
+			#calc number of samples per 50ms refresh time
+			samp_per_int = looper.RATE / 50
 			
-			#get amplitude of each track for the current position
-			track_1_data = np.max(np.abs(loops[0].audio.astype(np.int32)[track_1_pos][:]))
-			track_2_data = np.max(np.abs(loops[1].audio.astype(np.int32)[track_2_pos][:]))
-			track_3_data = np.max(np.abs(loops[2].audio.astype(np.int32)[track_3_pos][:]))
-			track_4_data = np.max(np.abs(loops[3].audio.astype(np.int32)[track_4_pos][:]))
-	
-						
-			#calc RMS amplitude for each track
-			track_1_rms = audioop.rms(track_1_data,2)
-			track_2_rms = audioop.rms(track_2_data,2)
-			track_3_rms = audioop.rms(track_3_data,2)
-			track_4_rms = audioop.rms(track_4_data,2)
+			#get volume of each track for the current position
+			#track_1_data = np.max(np.abs(loops[0].audio.astype(np.int32)[track_1_pos][:]))
+			#track_2_data = np.max(np.abs(loops[1].audio.astype(np.int32)[track_2_pos][:]))
+			#track_3_data = np.max(np.abs(loops[2].audio.astype(np.int32)[track_3_pos][:]))
+			#track_4_data = np.max(np.abs(loops[3].audio.astype(np.int32)[track_4_pos][:]))
 			
 			
-			#convert RMS to DB
-			if track_1_rms ==0:
-				track_1_vol = 0
+			#Since the GUI is updated every 50ms we need to get the average of all samples recorded since the last update
+			#this makes the volume meters more accurate and smoother
+			if track_1_pos >= samp_per_int:
+				track_1_data = np.mean(np.abs(loops[0].audio.astype(np.int32)[track_1_pos-samp_per_int:track_1_pos][:]))
 			else:
-				track_1_vol = 20 * log10(track_1_rms)
+				track_1_data = np.max(np.abs(loops[0].audio.astype(np.int32)[track_1_pos][:]))
 				
-			if track_2_rms ==0:
-				track_2_vol = 0
+			if track_2_pos >= samp_per_int:
+				track_2_data = np.mean(np.abs(loops[1].audio.astype(np.int32)[track_2_pos-samp_per_int:track_2_pos][:]))
 			else:
-				track_2_vol = 20 * log10(track_2_rms)
+				track_2_data = np.max(np.abs(loops[1].audio.astype(np.int32)[track_2_pos][:]))
 				
-			if track_3_rms ==0:
-				track_3_vol = 0
+			if track_3_pos >= samp_per_int:
+				track_3_data = np.mean(np.abs(loops[2].audio.astype(np.int32)[track_3_pos-samp_per_int:track_3_pos][:]))
 			else:
-				track_3_vol = 20 * log10(track_3_rms)
+				track_3_data = np.max(np.abs(loops[2].audio.astype(np.int32)[track_3_pos][:]))
 				
-			if track_4_rms ==0:
-				track_4_vol = 0
+			if track_4_pos >= samp_per_int:
+				track_4_data = np.mean(np.abs(loops[3].audio.astype(np.int32)[track_4_pos-samp_per_int:track_4_pos][:]))
 			else:
-				track_4_vol = 20 * log10(track_4_rms)
-				
-		
-			peak = 120
+				track_4_data = np.max(np.abs(loops[3].audio.astype(np.int32)[track_4_pos][:]))
+			
+			
+			#calc RMS volume for each track
+			track_1_vol = audioop.rms(track_1_data,2)
+			track_2_vol = audioop.rms(track_2_data,2)
+			track_3_vol = audioop.rms(track_3_data,2)
+			track_4_vol = audioop.rms(track_4_data,2)
 					
 
-			'''
-			print('track 1 vol: ' + str(track_1_vol)
-				 + ' | track 2 vol: ' + str(track_2_vol)
-				 + ' | track 3 vol: ' + str(track_3_vol)
-				 + ' | track 4 vol: ' + str(track_4_vol)
-				 + ' | Peak vol: ' + str(peak)
-				 )
-			'''	
+			
+			#print('track 1 vol: ' + str(track_1_vol)
+			#	 + ' | track 2 vol: ' + str(track_2_vol)
+			#	 + ' | track 3 vol: ' + str(track_3_vol)
+			#	 + ' | track 4 vol: ' + str(track_4_vol)
+			#	 + ' | Peak vol: ' + str(peak)
+			#	 )
+				
 		
 			#track 1
 			self.track1loop["value"] = track_1_pos
@@ -720,7 +683,7 @@ class Track(tk.Tk):
 				self.track4vol["value"] = track_4_vol
 				self.track4vol["maximum"] = peak
 			
-			self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[trackIndex].layer))
+			
 
 			#recursively calls itself every 50ms
 			self.after(50, self.read_bytes)
@@ -901,7 +864,6 @@ class Track(tk.Tk):
 		trackIndex = selectedTrack -1
 		
 		self.lblTrack.config(fg='yellow', text="TRACK " + str(activeTrack))
-		self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[trackIndex].layer))
 		
 		#set track state based on mode and previous state
 		if mode == M_PLAY or mode == M_STOP:
@@ -970,29 +932,15 @@ class Track(tk.Tk):
 		
 		trackIndex = activeTrack -1
 		
-		#If the loop has been initialized then clear the audio buffer and all layers but maintain the same loop length
 		if loops[trackIndex].initialized:
 			loops[trackIndex].audio = np.zeros([looper.MAXLENGTH, looper.CHUNK], dtype = np.int16)
-			loops[trackIndex].audio_layers = np.zeros([looper.LAYERS, looper.MAXLENGTH, looper.CHUNK], dtype = np.int16)
 			loops[trackIndex].preceding_buffer = np.zeros([looper.MAXLENGTH, looper.CHUNK], dtype = np.int16)
 			loops[trackIndex].peak_vol = 0
 			loops[trackIndex].dub_ratio = 1.0
-			loops[trackIndex].layer = 0
-			self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[trackIndex].layer))
 			if trackState[trackIndex] == S_ARM or trackState[trackIndex] == S_MUTE:
 				trackState[trackIndex] = S_PLAY
 				self.update_volume_bar(activeTrack)
 		
-	#Method called when the UNDO button is pressed
-	def undo_track(self):
-		global activeTrack
-		
-		trackIndex = activeTrack -1
-		
-		if loops[trackIndex].initialized:
-			loops[trackIndex].undo()
-			self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[trackIndex].layer))
-			
 		
 #create instance of the GUI
 app = Track()
@@ -1023,10 +971,9 @@ def updatevolume():
     global peak
 	
     loops[0].peak_vol = np.max(np.abs(loops[0].audio.astype(np.int32)[:][:]))
-    loops[1].peak_vol = np.max(np.abs(loops[1].audio.astype(np.int32)[:][:]))
-    loops[2].peak_vol = np.max(np.abs(loops[2].audio.astype(np.int32)[:][:]))
-    loops[3].peak_vol = np.max(np.abs(loops[3].audio.astype(np.int32)[:][:]))
-
+    loops[1].peak_vol = np.max(np.abs(loops[0].audio.astype(np.int32)[:][:]))
+    loops[2].peak_vol = np.max(np.abs(loops[0].audio.astype(np.int32)[:][:]))
+    loops[3].peak_vol = np.max(np.abs(loops[0].audio.astype(np.int32)[:][:]))
 	
     peak = np.max(
                   np.abs(
@@ -1065,8 +1012,6 @@ def looping_callback(in_data, frame_count, time_info, status):
 	
     #global looper.LENGTH
     current_rec_buffer = np.copy(np.frombuffer(in_data, dtype = np.int16))
- 
-	
     #print('length of buffer: ', len(in_data), ' | frame_count: ',frame_count)
     
 	
@@ -1082,13 +1027,13 @@ def looping_callback(in_data, frame_count, time_info, status):
                 setup_isrecording = False
                 return(looper.silence, pyaudio.paContinue)
             #otherwise append incoming audio to master loop, increment LENGTH and continue
-            loops[trackIndex].add_buffer(current_rec_buffer, False)
+            loops[trackIndex].add_buffer(current_rec_buffer)
             loops[trackIndex].isrecording = True
             for loop in loops:
                     if loop.trackNumber != activeTrack:
                         #record silence to non-active tracks
                         loop.isrecording = True
-                        loop.add_buffer(looper.silence, False)
+                        loop.add_buffer(looper.silence)
             looper.LENGTH = looper.LENGTH + 1
             return(looper.silence, pyaudio.paContinue)
         #if setup not done and not currently happening then just wait
@@ -1108,8 +1053,9 @@ def looping_callback(in_data, frame_count, time_info, status):
     for loop in loops:
         if loop.isrecording:
             if loop.initialized:
-                loop.add_buffer(current_rec_buffer, True)
-
+                loop.dub(current_rec_buffer)
+            else:
+                loop.add_buffer(current_rec_buffer)
 
 				
 
@@ -1172,7 +1118,6 @@ def close_master_track():
 	for loop in loops:
 		loop.initialize()
 		loop.isrecording = False
-		loop.layer += 1
 
 	updatevolume()
 	print('length is ' + str(looper.LENGTH))
@@ -1195,59 +1140,48 @@ def restart_looper():
 #Method that runs on a separate thread to wait and read incoming MIDI commands
 def read_midi():
 	while True:
-		while conn.in_waiting:
-			rx_msg = conn.read(3)
-			cc = rx_msg[1]
-			print(cc)
-			if cc == MIDI_MODE:
-				app.toggleMode()
-			elif cc == MIDI_RESET:
-				app.reset()
-			elif cc == MIDI_UNDO:
-				app.undo_track()
-			elif cc == MIDI_CLEAR:
-				app.clear_track()
-			elif cc == MIDI_RECPLAY:
-				app.playRec()
-			elif cc == MIDI_STOP:
-				app.stop()
-			elif cc == MIDI_T1:
-				app.track_press(1)
-			elif cc == MIDI_T2:
-				app.track_press(2)
-			elif cc == MIDI_T3:
-				app.track_press(3)
-			elif cc == MIDI_T4:
-				app.track_press(4)
+		msg = conn.read()  # read on ANY channel by default
+		print(msg.control_number)
+		if msg.control_number == MIDI_MODE:
+			app.toggleMode()
+		elif msg.control_number == MIDI_RESET:
+			app.reset()
+		elif msg.control_number == MIDI_CLEAR:
+			app.clear_track()
+		elif msg.control_number == MIDI_RECPLAY:
+			app.playRec()
+		elif msg.control_number == MIDI_STOP:
+			app.stop()
+		elif msg.control_number == MIDI_T1:
+			app.track_press(1)
+		elif msg.control_number == MIDI_T2:
+			app.track_press(2)
+		elif msg.control_number == MIDI_T3:
+			app.track_press(3)
+		elif msg.control_number == MIDI_T4:
+			app.track_press(4)
 			
-			if supportLEDs == True:
-				tx_msg = build_led_msg()
-				send_midi(tx_msg)
+		send_midi(10, LED_MODE)
+		send_midi(11, LED_T1)
+		send_midi(12, LED_T2)
+		send_midi(13, LED_T3)
+		send_midi(14, LED_T4)
 
 
-def build_led_msg():
-	led_track_byte = LED_T1  | (LED_T2 << 2) | (LED_T3 << 4) | (LED_T4 << 6)
-	msg = [0xB0, 10, LED_MODE, led_track_byte]
-	print(msg[0],':', msg[1], ':',f'{msg[2]:08b}', ':',f'{msg[3]:08b}')
-
-	return msg
-	
-def send_midi(msg):
-	conn.write(serial.to_bytes(msg))
+def send_midi(ctrl_num, value):
+	cc = ControlChange(ctrl_num, value)
+	msg = Message(cc, channel=1)
+	conn.write(msg)
 	
 	
 if usingMIDI == True:
-	try:
-		#open the COM port for the midi device
-		conn = serial.Serial(COM_PORT, 31250, timeout=0.5)
+	#open the COM port for the midi device
+	conn = MidiConnector(COM_PORT)
 
-		#Define a new thread and link it to 'read_midi' method so that GUI is not blocked
-		midi_thread = threading.Thread(target=read_midi)
-		midi_thread.setDaemon(True)
-		midi_thread.start()
-	except:
-		print('Error opening COM port. Disabling MIDI interface')
-		usingMIDI = False
+	#Define a new thread and link it to 'read_midi' method so that GUI is not blocked
+	midi_thread = threading.Thread(target=read_midi)
+	midi_thread.setDaemon(True)
+	midi_thread.start()
 
 app.mainloop()
 
