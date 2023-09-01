@@ -190,7 +190,7 @@ class audioloop:
         if overdub == False:
             #if not in overdub then add buffer and increment the length counter
             self.audio_layers[self.layer, self.length, :] = np.copy(buff)
-            self.length = self.length + 1
+            self.length += 1
         else:
             #if in overdub then add buffer at writep position 
             self.audio_layers[self.layer, self.writep, :] = np.copy(buff)
@@ -227,16 +227,7 @@ class audioloop:
     #combine_layers() mixes all the layers for the loop into a single buffer for playback at the specified index
     def combine_layers(self, index):
         if not self.initialized:
-            return
-
-        #clear current position in audio buffer
-        self.audio[index, :] = np.zeros([CHUNK], dtype = np.int16)  
-        tmp_buff = np.zeros([CHUNK], dtype = np.int16)  
-        
-        #loop through layers, combine, and write to audio buffer for playback
-        for n in range(self.layer): 
-            tmp_buff += (self.audio_layers[n, index, :] * (0.9**(n+1))
-            
+            return           
             
        
         self.audio[index, :] = tmp_buff
@@ -245,13 +236,10 @@ class audioloop:
         
         #loop through layers, combine, and write to audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff =  (tmp_buff) + (self.audio_layers[n, index, :]* (0.9**(n+1)))
+            tmp_buff += (self.audio_layers[n, index, :] * (0.9**(n+1)))
 
         self.audio[index, :] =  tmp_buff   
-        #self.audio[index, :] = np.multiply((
-        #                 tmp_buff.astype(np.int32)[:]
-        #                 ), output_volume, out= None, casting = 'unsafe').astype(np.int16)
-    
+       
 
     
     #clear() clears the loop and sets back to the init state (only called with RESET)
