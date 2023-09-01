@@ -191,8 +191,8 @@ class audioloop:
             self.audio_layers[self.layer, self.length, :] = np.copy(buff)
             self.length = self.length + 1
         else:
-            #if in overdub then add buffer at writep position and mult. by the dub ratio
-            self.audio_layers[self.layer, self.writep, :] = np.copy(buff) * self.dub_ratio
+            #if in overdub then add buffer at writep position 
+            self.audio_layers[self.layer, self.writep, :] = np.copy(buff)
 
     
     def is_restarting(self):
@@ -233,7 +233,7 @@ class audioloop:
         
         #loop through layers, combine, and write to audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff += self.audio_layers[n, index, :] 
+            tmp_buff += (self.audio_layers[n, index, :] * (0.9**(n+1))
             
        
         self.audio[index, :] = tmp_buff
