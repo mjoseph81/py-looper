@@ -235,6 +235,7 @@ class audioloop:
         for n in range(self.layer): 
             tmp_buff += (self.audio_layers[n, index, :] * (0.9**(n+1))
             
+            
        
         self.audio[index, :] = tmp_buff
     
