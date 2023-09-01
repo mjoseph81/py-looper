@@ -362,7 +362,6 @@ class Track(tk.Tk):
 		global setup_isrecording, setup_donerecording
 		global prev_rec_buffer, play_buffer
 		global peak, output_volume, activeTrack
-		global LED_T1, LED_T2, LED_T3, LED_T4
 		
 		print("Reset pressed")
 		#clear all loops
@@ -374,11 +373,14 @@ class Track(tk.Tk):
 			trackState[n-1] = S_PLAY
 			self.update_volume_bar(n)
 		
+<<<<<<< HEAD
 		LED_T1 = 0				
 		LED_T2 = 0
 		LED_T3 = 0
 		LED_T4 = 0
 
+=======
+>>>>>>> 24eeb7ee5abf20c092e4e67074415d5b9ed6e6d8
 		#clear global variables
 		looper.LENGTH = 0
 		isRunning = False

@@ -166,6 +166,7 @@ class audioloop:
     
     #add_buffer() appends a new buffer unless loop is filled to MAXLENGTH
     #if 'overdub' is false then it builds the length for the loop, if true then it add chunks to the current layer
+
     def add_buffer(self, data, overdub):
         if self.length >= (MAXLENGTH - 1):
             self.length = 0
@@ -217,6 +218,7 @@ class audioloop:
         #if initialized and playing, read audio from the loop and increment pointers
         tmp = self.readp
         self.incptrs()
+
         #combine all layers for the position and write to audio buffer
         self.combine_layers(tmp)
         return(self.audio[tmp, :])
@@ -238,6 +240,19 @@ class audioloop:
             
        
         self.audio[index, :] = tmp_buff
+        tmp_buff = np.zeros([CHUNK], dtype = np.int16)
+       
+        
+        #loop through layers, combine, and write to audio buffer for playback
+        for n in range(self.layer): 
+            tmp_buff =  (tmp_buff) + (self.audio_layers[n, index, :]* (0.9**(n+1)))
+
+        self.audio[index, :] =  tmp_buff   
+        #self.audio[index, :] = np.multiply((
+        #                 tmp_buff.astype(np.int32)[:]
+        #                 ), output_volume, out= None, casting = 'unsafe').astype(np.int16)
+    
+
     
     #clear() clears the loop and sets back to the init state (only called with RESET)
     def clear(self):
@@ -279,7 +294,7 @@ class audioloop:
         if self.length <= (MAXLENGTH/2)-1:
             for m in range(self.layer):
                 for n in range(self.length):
-                    self.audio_layer[m, n+self.length, :] = self.audio_layer[m, n, :]
+                    self.audio_layers[m, n+self.length, :] = self.audio_layers[m, n, :]
                 self.length += self.length
         else:
             print('Loop exceeds max length to multiply')
