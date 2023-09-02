@@ -113,7 +113,7 @@ if os.path.exists('Config/'+MIDI_CONF):
 	MIDI_T4 = int(parameters[9]) 
 	COM_PORT = str(parameters[10]).strip("\r\n")
 	USE_LEDS = str(parameters[11]).strip("\r\n")
-	
+	print(COM_PORT)
 	if USE_LEDS != 'YES' and USE_LEDS != 'NO':
 		print('Invalid input for LED support parameter, defaulting to disable LEDs.')
 		USE_LEDS = 'NO'
@@ -635,7 +635,6 @@ class Track(tk.Tk):
 	def read_bytes(self):
 		global isRunnning
 		global tracks
-		global peak
 		global activeTrack
 		
 		trackIndex = activeTrack -1
@@ -684,7 +683,7 @@ class Track(tk.Tk):
 				track_4_vol = 20 * log10(track_4_rms)
 				
 		
-			peak = 120
+			max_db = 120
 					
 
 			'''
@@ -700,27 +699,27 @@ class Track(tk.Tk):
 			self.track1loop["value"] = track_1_pos
 			self.track1loop["maximum"] =loops[0].length
 			self.track1vol["value"] = track_1_vol
-			self.track1vol["maximum"] = peak
+			self.track1vol["maximum"] = max_db
 
 			#track 2
 			self.track2loop["value"] = track_2_pos
 			self.track2loop["maximum"] =loops[1].length
 			self.track2vol["value"] = track_2_vol
-			self.track2vol["maximum"] = peak
+			self.track2vol["maximum"] = max_db
 
 			if NUM_TRACKS >= 3:
 				#track 3
 				self.track3loop["value"] = track_3_pos
 				self.track3loop["maximum"] =loops[2].length
 				self.track3vol["value"] = track_3_vol
-				self.track3vol["maximum"] = peak
+				self.track3vol["maximum"] = max_db
 			
 			if NUM_TRACKS == 4:
 				#track 4
 				self.track4loop["value"] = track_4_pos
 				self.track4loop["maximum"] =loops[3].length
 				self.track4vol["value"] = track_4_vol
-				self.track4vol["maximum"] = peak
+				self.track4vol["maximum"] = max_db
 			
 			self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[trackIndex].layer))
 
@@ -1233,9 +1232,10 @@ def read_midi():
 
 
 def build_led_msg():
+	#shift value left 2 bit and combine into a single byte
 	led_track_byte = LED_T1  | (LED_T2 << 2) | (LED_T3 << 4) | (LED_T4 << 6)
 	msg = [0xB0, 10, LED_MODE, led_track_byte]
-	print(msg[0],':', msg[1], ':',f'{msg[2]:08b}', ':',f'{msg[3]:08b}')
+	print("LED Tx message: ", msg[0],':', msg[1], ':',f'{msg[2]:08b}', ':',f'{msg[3]:08b}')
 
 	return msg
 	

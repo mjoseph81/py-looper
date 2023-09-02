@@ -57,7 +57,6 @@ OVERSHOOT = round((overshoot_in_milliseconds/1000) * (RATE/CHUNK)) #allowance in
 MAXLENGTH = int(12582912 / CHUNK) #96mb of audio in total
 SAMPLEMAX = 0.9 * (2**15) #maximum possible value for an audio sample (little bit of margin)
 LENGTH = 0 #length of the first recording on track 1, all subsequent recordings quantized to a multiple of this.
-
 LAYERS = 16 #support a max of 16 overdub layers per track
 debounce_length = 0.1 #length in seconds of button debounce period
 
@@ -168,7 +167,7 @@ class audioloop:
     
     
     #add_buffer() appends a new buffer unless loop is filled to MAXLENGTH
-    #expected to only be called before initialization
+    #build first layer up to self.length, then overdub to each audio layer buffer
     def add_buffer(self, data, overdub):
         if self.length >= (MAXLENGTH - 1):
             self.length = 0
@@ -233,11 +232,11 @@ class audioloop:
         tmp_buff = np.zeros([CHUNK], dtype = np.int16)
        
         
-        #loop through layers, combine, and write to audio buffer for playback
+        #loop through layers, combine, antennuate by 0.9, and write to temp audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff += self.audio_layers[n, index, :] 
+            tmp_buff += (self.audio_layers[n, index, :]).astype(np.int16)
                                                           
-
+        #copy combined layers to audio buffer
         self.audio[index, :] =  tmp_buff
        
     
@@ -266,6 +265,8 @@ class audioloop:
     def undo(self):
         self.audio_layers[self.layer, :, :] = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
         self.layer -= 1
+        self.audio_layers[self.layer, :, :] = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
+        
     
     
     def start_recording(self, previous_buffer):
