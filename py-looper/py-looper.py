@@ -626,7 +626,7 @@ class Track(tk.Tk):
 			for n in tracks:
 				#self.mute(ON,n)
 				self.update_volume_bar(n)
-		else:
+		elif mode == M_RECORD:
 			loops[activeTrack-1].instant_multiply()
 
 		
