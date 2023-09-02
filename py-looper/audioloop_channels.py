@@ -16,6 +16,7 @@
  *  1.2.0)  added multiple buffers for each layer to support UNDO
 '''
 
+
 import pyaudio
 import numpy as np
 import time
@@ -92,6 +93,7 @@ class audioloop:
         self.isrecording = False
         self.isplaying = False
         self.iswaiting = False
+        self.record_on_layer = False
         self.last_buffer_recorded = 0 #index of last buffer added
         self.preceding_buffer = np.zeros([CHUNK], dtype = np.int16)
         #dub ratio must be reduced with each overdub to keep all overdubs at the same level while preventing clipping.
@@ -123,9 +125,10 @@ class audioloop:
     def incptrs(self):
         if self.readp == self.length - 1:
             self.readp = 0
-            if self.isrecording:
+            #check if layer has been recorded on 
+            if self.record_on_layer:
+                self.record_on_layer = False
                 self.dub_ratio = self.dub_ratio * 0.9
-                #if loop restarts while recording then we need to increment to the next layer
                 self.layer += 1
                 print(self.dub_ratio)
                 
@@ -165,8 +168,7 @@ class audioloop:
     
     
     #add_buffer() appends a new buffer unless loop is filled to MAXLENGTH
-    #if 'overdub' is false then it builds the length for the loop, if true then it add chunks to the current layer
-
+    #expected to only be called before initialization
     def add_buffer(self, data, overdub):
         if self.length >= (MAXLENGTH - 1):
             self.length = 0
@@ -190,10 +192,10 @@ class audioloop:
         if overdub == False:
             #if not in overdub then add buffer and increment the length counter
             self.audio_layers[self.layer, self.length, :] = np.copy(buff)
-            self.length += 1
+            self.length = self.length + 1
         else:
-            #if in overdub then add buffer at writep position 
-            self.audio_layers[self.layer, self.writep, :] = np.copy(buff)
+            #if in overdub then add buffer at writep position and mult. by the dub ratio
+            self.audio_layers[self.layer, self.writep, :] = np.copy(buff) * self.dub_ratio
 
     
     def is_restarting(self):
@@ -208,18 +210,15 @@ class audioloop:
     def read(self):
         #if not initialized do nothing
         if not self.initialized:
-            print('read - not init')
             return(silence)
         #if initialized but muted just increment pointers
         if not self.isplaying:
-            print('read - not playing')
             self.incptrs()
             return(silence)
         #if initialized and playing, read audio from the loop and increment pointers
         tmp = self.readp
         self.incptrs()
-
-        #combine all layers for the position and write to audio buffer
+        #combine all layers for position and write to audio buffer
         self.combine_layers(tmp)
         return(self.audio[tmp, :])
     
@@ -227,20 +226,20 @@ class audioloop:
     #combine_layers() mixes all the layers for the loop into a single buffer for playback at the specified index
     def combine_layers(self, index):
         if not self.initialized:
-            return           
-            
-       
-        self.audio[index, :] = tmp_buff
+            return
+
+        #clear current position in audio buffer
+        self.audio[index, :] = np.zeros([CHUNK], dtype = np.int16)  
         tmp_buff = np.zeros([CHUNK], dtype = np.int16)
        
         
         #loop through layers, combine, and write to audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff += (self.audio_layers[n, index, :] * (0.9**(n+1)))
+            tmp_buff += self.audio_layers[n, index, :] 
+                                                          
 
-        self.audio[index, :] =  tmp_buff   
+        self.audio[index, :] =  tmp_buff
        
-
     
     #clear() clears the loop and sets back to the init state (only called with RESET)
     def clear(self):
@@ -283,7 +282,9 @@ class audioloop:
             for m in range(self.layer):
                 for n in range(self.length):
                     self.audio_layers[m, n+self.length, :] = self.audio_layers[m, n, :]
-                self.length += self.length
+            print("Old length: ", self.length)
+            self.length += self.length
+            print("New length: ", self.length)
         else:
             print('Loop exceeds max length to multiply')
 

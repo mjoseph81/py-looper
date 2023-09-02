@@ -65,7 +65,7 @@ LED_RED = 2
 LED_AMBER = 3
 
 #LEDs
-LED_MODE = 1				
+LED_MODE = 0				
 LED_T1 = 0				
 LED_T2 = 0
 LED_T3 = 0
@@ -290,9 +290,9 @@ class Track(tk.Tk):
 			#Create RESET button
 			self.btnReset = ttk.Button(cntl_frame,text="RESET", command=self.reset)
 			self.btnReset.pack(pady=5)
+		
+		
 
-		
-		
 		#track 1 column
 		self.track1loop = ttk.Progressbar(tr1_frame, style="gray1.Horizontal.TProgressbar", orient="horizontal", length=frame_width-10, mode="determinate")
 		self.track1loop.pack(padx=5)
@@ -379,8 +379,8 @@ class Track(tk.Tk):
 		LED_T3 = 0
 		LED_T4 = 0
 
-
 		#clear global variables
+		#mode = M_PLAY
 		looper.LENGTH = 0
 		isRunning = False
 		setup_isrecording = False 
@@ -411,6 +411,7 @@ class Track(tk.Tk):
 			self.track4vol["value"] = 0
 
 		self.lblTrack.config(fg='yellow', text="TRACK " + str(activeTrack))
+		self.lblLayer.config(fg='yellow', text="LAYER " + str(loops[activeTrack-1].layer))
 		
 
 	#Method for when the REC/PLAY button is pressed
@@ -777,7 +778,7 @@ class Track(tk.Tk):
 			elif trackState[trackIndex]  == S_PLAY:
 				self.track1vol.configure(style="green.Horizontal.TProgressbar")
 				self.track1loop.configure(style="blue1.Horizontal.TProgressbar")
-				if loops[selectedTrack].initialized:
+				if loops[selectedTrack].initialized == True:
 					LED_T1 = LED_GREEN
 			elif trackState[trackIndex]  == S_RECORD:
 				self.track1vol.configure(style="red.Horizontal.TProgressbar")
@@ -800,7 +801,7 @@ class Track(tk.Tk):
 			elif trackState[trackIndex]  == S_PLAY:
 				self.track2vol.configure(style="green.Horizontal.TProgressbar")
 				self.track2loop.configure(style="blue1.Horizontal.TProgressbar")
-				if loops[selectedTrack].initialized:
+				if loops[selectedTrack].initialized == True:
 					LED_T2 = LED_GREEN
 			elif trackState[trackIndex]  == S_RECORD:
 				self.track2vol.configure(style="red.Horizontal.TProgressbar")
@@ -824,7 +825,7 @@ class Track(tk.Tk):
 				elif trackState[trackIndex]  == S_PLAY:
 					self.track3vol.configure(style="green.Horizontal.TProgressbar")
 					self.track3loop.configure(style="blue1.Horizontal.TProgressbar")
-					if loops[selectedTrack].initialized:
+					if loops[selectedTrack].initialized == True:
 						LED_T3 = LED_GREEN
 				elif trackState[trackIndex]  == S_RECORD:
 					self.track3vol.configure(style="red.Horizontal.TProgressbar")
@@ -848,7 +849,7 @@ class Track(tk.Tk):
 				elif trackState[trackIndex]  == S_PLAY:
 					self.track4vol.configure(style="green.Horizontal.TProgressbar")
 					self.track4loop.configure(style="blue1.Horizontal.TProgressbar")
-					if loops[selectedTrack].initialized:
+					if loops[selectedTrack].initialized == True:
 						LED_T4 = LED_GREEN
 				elif trackState[trackIndex]  == S_RECORD:
 					self.track4vol.configure(style="red.Horizontal.TProgressbar")
@@ -1113,6 +1114,7 @@ def looping_callback(in_data, frame_count, time_info, status):
     for loop in loops:
         if loop.isrecording:
             if loop.initialized:
+                loop.record_on_layer = True
                 loop.add_buffer(current_rec_buffer, True)
 
 
