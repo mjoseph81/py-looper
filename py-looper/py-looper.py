@@ -90,6 +90,9 @@ peak = 0
 usingMIDI = False
 supportLEDs = False
 
+restart_fadein = False
+stop_fadeout = False
+
 #Check if conf file for MIDI bindings is present and load them
 #If file does not exist then disable MIDI connection
 if os.path.exists('Config/'+MIDI_CONF):
@@ -532,6 +535,7 @@ class Track(tk.Tk):
 		global frame_width
 		global frame_height
 		global peak
+		global restart_fadein
 		
 		sRed = ttk.Style()
 		sRed.configure("blue.Horizontal.TProgressbar", foreground='blue', background='blue',length=frame_width-10, thickness=20)
@@ -574,6 +578,9 @@ class Track(tk.Tk):
 
 			self.track4vol["value"] = 0
 			self.track4vol["maximum"] = vol_max
+			
+		#set "restart_fadein" to True to enable fadein
+		restart_fadein = True
 				
 		#create new thread for updating the loop and volume bars on the GUI	
 		global read_data_thread
@@ -592,11 +599,16 @@ class Track(tk.Tk):
 		global ON, OFF
 		global mode, M_PLAY, M_RECORD
 		global S_PLAY, S_MUTE, S_ARM
+		global stop_fadeout
 		
 		
 		
 		if mode == M_PLAY:
 			isRunning=0
+			
+			#set "stop_fadeout" to True to enable fadeout
+			stop_fadeout = True
+			
 			mode = M_STOP
 			for loop in loops:
 				if trackState[loop.trackNumber-1] != S_MUTE:
@@ -1027,6 +1039,7 @@ def updatevolume():
     global output_volume
     global peak
 	
+	
     loops[0].peak_vol = np.max(np.abs(loops[0].audio.astype(np.int32)[:][:]))
     loops[1].peak_vol = np.max(np.abs(loops[1].audio.astype(np.int32)[:][:]))
     loops[2].peak_vol = np.max(np.abs(loops[2].audio.astype(np.int32)[:][:]))
@@ -1064,6 +1077,7 @@ def looping_callback(in_data, frame_count, time_info, status):
     global setup_donerecording
     global setup_isrecording
     global activeTrack
+    global restart_fadein, stop_fadeout
 	
 	
     trackIndex = activeTrack - 1
@@ -1117,7 +1131,8 @@ def looping_callback(in_data, frame_count, time_info, status):
                 loop.add_buffer(current_rec_buffer, True)
 
 
-				
+    fi = restart_fadein
+    fo = stop_fadeout
 
     #add to play_buffer only one-fourth of each audio signal times the output_volume
     play_buffer[:] = np.multiply((
@@ -1126,6 +1141,16 @@ def looping_callback(in_data, frame_count, time_info, status):
                                  + loops[2].read().astype(np.int32)[:]
                                  + loops[3].read().astype(np.int32)[:]
                                  ), looper.output_volume, out= None, casting = 'unsafe').astype(np.int16)
+	
+    if restart_fadein:
+        looper.fadein(play_buffer)
+    elif stop_fadeout:
+        looper.fadeout(play_buffer)
+	
+	#reset fadein/fadeout if set
+    restart_fadein = False
+    stop_fadeout = False
+	
     #current buffer will serve as previous in next iteration
     prev_rec_buffer = np.copy(current_rec_buffer)
     #play mixed audio and move on to next iteration

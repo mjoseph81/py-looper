@@ -219,6 +219,7 @@ class audioloop:
         self.incptrs()
         #combine all layers for position and write to audio buffer
         self.combine_layers(tmp)
+
         return(self.audio[tmp, :])
     
     
@@ -234,7 +235,7 @@ class audioloop:
         
         #loop through layers, combine, antennuate by 0.9, and write to temp audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff += (self.audio_layers[n, index, :]).astype(np.int16)
+            tmp_buff = ((tmp_buff.astype(np.int32) + self.audio_layers[n, index, :].astype(np.int32))*0.9).astype(np.int16)
                                                           
         #copy combined layers to audio buffer
         self.audio[index, :] =  tmp_buff
