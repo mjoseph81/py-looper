@@ -235,10 +235,11 @@ class audioloop:
         
         #loop through layers, combine, antennuate by 0.9, and write to temp audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff = ((tmp_buff.astype(np.int32) + self.audio_layers[n, index, :].astype(np.int32))*0.9).astype(np.int16)
+            tmp_buff += self.audio_layers[n, index, :]
+                
                                                           
         #copy combined layers to audio buffer
-        self.audio[index, :] =  tmp_buff
+        self.audio[index, :] =  np.copy(tmp_buff)
        
     
     #clear() clears the loop and sets back to the init state (only called with RESET)
