@@ -91,6 +91,7 @@ usingMIDI = False
 supportLEDs = False
 restart_fadein = False
 stop_fadeout = False
+fade_counter = 0
 
 #Check if conf file for MIDI bindings is present and load them
 #If file does not exist then disable MIDI connection
@@ -1107,15 +1108,29 @@ def looping_callback(in_data, frame_count, time_info, status):
                                  + loops[3].read().astype(np.int32)[:]
                                  ), looper.output_volume, out= None, casting = 'unsafe').astype(np.int16)
     
+	#if fade in/out is set then apply fade to chunks to prevent "popping"
     if restart_fadein:
-        print("fading in first chunk")
+        print("fading in chunk")
+        if fade_counter == 0:
+            looper.upramp = np.linspace(0, 0.5, CHUNK)
+        elif fade_counter == 1:
+            looper.upramp = np.linspace(0.5, 1, CHUNK)
+        fade_counter++
         looper.fadein(play_buffer)
     elif stop_fadeout:
-        print("fading out last chunk")
+        print("fading out chunk")
+        if fade_counter == 0:
+            looper.downramp = np.linspace(1, 0.5, CHUNK)
+        elif fade_counter == 1:
+            looper.downramp = np.linspace(0.5, 0, CHUNK)
+        fade_counter++
         looper.fadeout(play_buffer)
     
-    restart_fadein = False
-    stop_fadeout = False
+    if fade_counter > 1:
+        #clear fade flags
+        restart_fadein = False
+        stop_fadeout = False
+        fade_counter = 0
     
     #current buffer will serve as previous in next iteration
     prev_rec_buffer = np.copy(current_rec_buffer)
