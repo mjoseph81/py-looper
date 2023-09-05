@@ -65,6 +65,10 @@ silence = np.zeros([CHUNK], dtype = np.int16) #a buffer containing silence
 #This is updated dynamically as max peak in resultant audio changes
 output_volume = np.float16(1.0)
 
+restart_fadein = False
+stop_fadeout = False
+
+
 #multiplying by upramp and downramp gives fade-in and fade-out
 downramp = np.linspace(1, 0, CHUNK)
 upramp = np.linspace(0, 1, CHUNK)
@@ -190,9 +194,13 @@ class audioloop:
             self.incptrs()
             return(silence)
         #if initialized and playing, read audio from the loop and increment pointers
-        tmp = self.readp
+        pos = self.readp
+        if pos == 0:
+            restart_fadein = True
+        elif pos == self.length-1:
+            stop_fadeout = True
         self.incptrs()
-        return(self.audio[tmp, :])
+        return(self.audio[pos, :])
     #dub() mixes an incoming buffer of audio with the one at writep
     def dub(self, data, fade_in = False, fade_out = False):
         if not self.initialized:

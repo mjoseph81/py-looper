@@ -89,8 +89,6 @@ frame_height = 0
 peak = 0
 usingMIDI = False
 supportLEDs = False
-restart_fadein = False
-stop_fadeout = False
 fade_counter = 0
 
 #Check if conf file for MIDI bindings is present and load them
@@ -569,7 +567,7 @@ class Track(tk.Tk):
             self.track4vol["maximum"] = vol_max
         
         #flag to "fade in" upon playback start to prevent popping sound cause by "digital cliff"
-        restart_fadein = True
+        looper.restart_fadein = True
         
         #create new thread for updating the loop and volume bars on the GUI 
         global read_data_thread
@@ -596,7 +594,7 @@ class Track(tk.Tk):
             mode = M_STOP
             
             #flag to "fade out" upon playback stop to prevent popping sound cause by "digital cliff"
-            stop_fadeout = True
+            looper.stop_fadeout = True
         
             for loop in loops:
                 if trackState[loop.trackNumber-1] != S_MUTE:
@@ -777,7 +775,8 @@ class Track(tk.Tk):
             elif trackState[trackIndex]  == S_PLAY:
                 self.track1vol.configure(style="green.Horizontal.TProgressbar")
                 self.track1loop.configure(style="blue1.Horizontal.TProgressbar")
-                LED_T1 = LED_GREEN
+                if loops[trackIndex].initialized:
+                    LED_T1 = LED_GREEN
             elif trackState[trackIndex]  == S_RECORD:
                 self.track1vol.configure(style="red.Horizontal.TProgressbar")
                 self.track1loop.configure(style="red1.Horizontal.TProgressbar")
@@ -799,7 +798,8 @@ class Track(tk.Tk):
             elif trackState[trackIndex]  == S_PLAY:
                 self.track2vol.configure(style="green.Horizontal.TProgressbar")
                 self.track2loop.configure(style="blue1.Horizontal.TProgressbar")
-                LED_T2 = LED_GREEN
+                if loops[trackIndex].initialized:   
+                    LED_T2 = LED_GREEN
             elif trackState[trackIndex]  == S_RECORD:
                 self.track2vol.configure(style="red.Horizontal.TProgressbar")
                 self.track2loop.configure(style="red1.Horizontal.TProgressbar")
@@ -822,7 +822,8 @@ class Track(tk.Tk):
                 elif trackState[trackIndex]  == S_PLAY:
                     self.track3vol.configure(style="green.Horizontal.TProgressbar")
                     self.track3loop.configure(style="blue1.Horizontal.TProgressbar")
-                    LED_T3 = LED_GREEN
+                    if loops[trackIndex].initialized:
+                        LED_T3 = LED_GREEN
                 elif trackState[trackIndex]  == S_RECORD:
                     self.track3vol.configure(style="red.Horizontal.TProgressbar")
                     self.track3loop.configure(style="red1.Horizontal.TProgressbar")
@@ -845,7 +846,8 @@ class Track(tk.Tk):
                 elif trackState[trackIndex]  == S_PLAY:
                     self.track4vol.configure(style="green.Horizontal.TProgressbar")
                     self.track4loop.configure(style="blue1.Horizontal.TProgressbar")
-                    LED_T4 = LED_GREEN
+                    if loops[trackIndex].initialized:
+                        LED_T4 = LED_GREEN
                 elif trackState[trackIndex]  == S_RECORD:
                     self.track4vol.configure(style="red.Horizontal.TProgressbar")
                     self.track4loop.configure(style="red1.Horizontal.TProgressbar")
@@ -1045,7 +1047,7 @@ def looping_callback(in_data, frame_count, time_info, status):
     global setup_donerecording
     global setup_isrecording
     global activeTrack
-    global restart_fadein, stop_fadeout
+    global fade_counter
     
     trackIndex = activeTrack - 1
     
@@ -1108,28 +1110,28 @@ def looping_callback(in_data, frame_count, time_info, status):
                                  + loops[3].read().astype(np.int32)[:]
                                  ), looper.output_volume, out= None, casting = 'unsafe').astype(np.int16)
     
-	#if fade in/out is set then apply fade to chunks to prevent "popping"
-    if restart_fadein:
+    #if fade in/out is set then apply fade to chunks to prevent "popping"
+    if looper.restart_fadein:
         print("fading in chunk")
         if fade_counter == 0:
-            looper.upramp = np.linspace(0, 0.5, CHUNK)
+            looper.upramp = np.linspace(0, 0.5, looper.CHUNK)
         elif fade_counter == 1:
-            looper.upramp = np.linspace(0.5, 1, CHUNK)
-        fade_counter++
+            looper.upramp = np.linspace(0.5, 1, looper.CHUNK)
+        fade_counter += 1
         looper.fadein(play_buffer)
     elif stop_fadeout:
         print("fading out chunk")
         if fade_counter == 0:
-            looper.downramp = np.linspace(1, 0.5, CHUNK)
+            looper.downramp = np.linspace(1, 0.5, looper.CHUNK)
         elif fade_counter == 1:
-            looper.downramp = np.linspace(0.5, 0, CHUNK)
-        fade_counter++
+            looper.downramp = np.linspace(0.5, 0, looper.CHUNK)
+        fade_counter += 1
         looper.fadeout(play_buffer)
     
     if fade_counter > 1:
         #clear fade flags
-        restart_fadein = False
-        stop_fadeout = False
+        looper.restart_fadein = False
+        looper.stop_fadeout = False
         fade_counter = 0
     
     #current buffer will serve as previous in next iteration
