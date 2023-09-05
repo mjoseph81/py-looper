@@ -1119,7 +1119,7 @@ def looping_callback(in_data, frame_count, time_info, status):
             looper.upramp = np.linspace(0.5, 1, looper.CHUNK)
         fade_counter += 1
         looper.fadein(play_buffer)
-    elif stop_fadeout:
+    elif looper.stop_fadeout:
         print("fading out chunk")
         if fade_counter == 0:
             looper.downramp = np.linspace(1, 0.5, looper.CHUNK)
