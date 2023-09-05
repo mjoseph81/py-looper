@@ -230,16 +230,22 @@ class audioloop:
 
         #clear current position in audio buffer
         self.audio[index, :] = np.zeros([CHUNK], dtype = np.int16)  
-        tmp_buff = np.zeros([CHUNK], dtype = np.int16)
+        tmp_buff = np.zeros([CHUNK], dtype = np.int32)
        
         
         #loop through layers, combine, antennuate by 0.9, and write to temp audio buffer for playback
         for n in range(self.layer): 
-            tmp_buff += self.audio_layers[n, index, :]
-                
+            tmp_buff = (tmp_buff.astype(np.int32) + self.audio_layers[n, index, :].astype(np.int32))
+        
+        #check for clipping and adjust
+        for m in tmp_buff:
+            if m > 32767:
+                m = 32767
+            elif m < -32768:
+                m = -32768
                                                           
         #copy combined layers to audio buffer
-        self.audio[index, :] =  np.copy(tmp_buff)
+        self.audio[index, :] =  np.copy(tmp_buff.astype(np.int16)) * 0.9
        
     
     #clear() clears the loop and sets back to the init state (only called with RESET)
