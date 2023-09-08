@@ -33,6 +33,7 @@ from midi import Message
 import audioop
 from math import log10
 import serial
+import wave
 
 #App Version
 VERSION = "v1.1.1"
@@ -981,6 +982,15 @@ class Track(tk.Tk):
                 trackState[trackIndex] = S_PLAY
                 self.update_volume_bar(activeTrack)
         
+    def writeTrack(self, filename, buffer):
+
+        waveFile = wave.open(filename, 'wb')
+        waveFile.setnchannels(looper.CHANNELS)
+        waveFile.setsampwidth(audio.get_sample_size(looper.FORMAT))
+        waveFile.setframerate(looper.RATE)
+        waveFile.writeframes(b''.join(buffer))
+        waveFile.close()
+        
         
 #create instance of the GUI
 app = Track()
@@ -1109,31 +1119,8 @@ def looping_callback(in_data, frame_count, time_info, status):
                                  + loops[2].read().astype(np.int32)[:]
                                  + loops[3].read().astype(np.int32)[:]
                                  ), looper.output_volume, out= None, casting = 'unsafe').astype(np.int16)
-    
-    #if fade in/out is set then apply fade to chunks to prevent "popping"
-    if looper.restart_fadein:
-        print("fading in chunk")
-        if fade_counter == 0:
-            looper.upramp = np.linspace(0, 0.5, looper.CHUNK)
-        elif fade_counter == 1:
-            looper.upramp = np.linspace(0.5, 1, looper.CHUNK)
-        fade_counter += 1
-        looper.fadein(play_buffer)
-    elif looper.stop_fadeout:
-        print("fading out chunk")
-        if fade_counter == 0:
-            looper.downramp = np.linspace(1, 0.5, looper.CHUNK)
-        elif fade_counter == 1:
-            looper.downramp = np.linspace(0.5, 0, looper.CHUNK)
-        fade_counter += 1
-        looper.fadeout(play_buffer)
-    
-    if fade_counter > 1:
-        #clear fade flags
-        looper.restart_fadein = False
-        looper.stop_fadeout = False
-        fade_counter = 0
-    
+   
+	
     #current buffer will serve as previous in next iteration
     prev_rec_buffer = np.copy(current_rec_buffer)
     #play mixed audio and move on to next iteration

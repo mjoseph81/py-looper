@@ -70,7 +70,7 @@ stop_fadeout = False
 
 
 #multiplying by upramp and downramp gives fade-in and fade-out
-downramp = np.linspace(1, 0, CHUNK)
+downramp = np.linspace(0.4, 0, CHUNK)
 upramp = np.linspace(0, 1, CHUNK)
 #fadein() applies fade-in to a buffer
 def fadein(buffer):
@@ -146,7 +146,7 @@ class audioloop:
         print('length ' + str(self.length))
         print('last buffer recorded ' + str(self.last_buffer_recorded))
         #crossfade
-        #fadeout(self.audio[self.last_buffer_recorded]) #fade out the last recorded buffer
+        fadeout(self.audio[self.last_buffer_recorded]) #fade out the last recorded buffer
         preceding_buffer_copy = np.copy(self.preceding_buffer)
         #fadein(preceding_buffer_copy)
         self.audio[self.length - 1, :] += preceding_buffer_copy[:]
@@ -193,13 +193,13 @@ class audioloop:
         if not self.isplaying:
             self.incptrs()
             return(silence)
+        
+        self.incptrs()
+        
         #if initialized and playing, read audio from the loop and increment pointers
         pos = self.readp
-        if pos == 0:
-            restart_fadein = True
-        elif pos == self.length-1:
-            stop_fadeout = True
-        self.incptrs()
+        
+       
         return(self.audio[pos, :])
     #dub() mixes an incoming buffer of audio with the one at writep
     def dub(self, data, fade_in = False, fade_out = False):
