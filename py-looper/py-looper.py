@@ -35,6 +35,9 @@ from math import log10
 import serial
 import wave
 
+import matplotlib.pyplot as plt
+
+
 #App Version
 VERSION = "v1.1.1"
 
@@ -91,6 +94,8 @@ peak = 0
 usingMIDI = False
 supportLEDs = False
 fade_counter = 0
+
+wavFile = './plotwav.wav'
 
 #Check if conf file for MIDI bindings is present and load them
 #If file does not exist then disable MIDI connection
@@ -283,6 +288,9 @@ class Track(tk.Tk):
             self.btnReset = ttk.Button(cntl_frame,text="RESET", command=self.reset)
             self.btnReset.pack(pady=5)
         
+            #Create PLOT button
+            self.btnPlot = ttk.Button(cntl_frame,text="PLOT", command=self.plotWav)
+            self.btnPlot.pack(pady=5)
         
 
         #track 1 column
@@ -981,17 +989,23 @@ class Track(tk.Tk):
             if trackState[trackIndex] == S_ARM or trackState[trackIndex] == S_MUTE:
                 trackState[trackIndex] = S_PLAY
                 self.update_volume_bar(activeTrack)
+
         
-    def writeTrack(self, filename, buffer):
-        waveFile = wave.open(filename, 'wb')
+        
+    def plotWav(self):
+        global wavFile
+        global play_buffer
+        
+        buffer = loops[0].audio[:looper.LENGTH:]
+        
+        waveFile = wave.open(wavFile, 'wb')
         waveFile.setnchannels(looper.CHANNELS)
-        waveFile.setsampwidth(audio.get_sample_size(looper.FORMAT))
+        waveFile.setsampwidth(pa.get_sample_size(looper.FORMAT))
         waveFile.setframerate(looper.RATE)
         waveFile.writeframes(b''.join(buffer))
         waveFile.close()
         
-    def plotWav(self, filename):
-        spf = wave.open(filename, "r")
+        spf = wave.open(wavFile, "r")
 
         # Extract Raw Audio from Wav File
         sample_freq = spf.getframerate()
@@ -1003,23 +1017,18 @@ class Track(tk.Tk):
         sig_array = np.frombuffer(signal, dtype=np.int16)
         
         #get just the left channel
-        sig_array_l = sig_array[::2])
+        sig_array_l = sig_array[::2]
 
         times = np.linspace(0, t_audio, num=n_samples)
 
-
-        # If Stereo
-        if spf.getnchannels() == 2:
-            print("Just mono files")
-            sys.exit(0)
-
         plt.figure(1)
         plt.title("Signal Wave...")
-        plt.plot(times, sig_array)
+        plt.plot(times, sig_array_l)
         plt.ylabel("Signal Wave")
         plt.xlabel("Time (s)")
         plt.xlim(0, t_audio)
-        plt.show()
+        #plt.show()
+        plt.savefig("mygraph.png")
         
         
 #create instance of the GUI
