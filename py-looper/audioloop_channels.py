@@ -70,8 +70,8 @@ stop_fadeout = False
 
 
 #multiplying by upramp and downramp gives fade-in and fade-out
-downramp = np.linspace(0.4, 0, CHUNK)
-upramp = np.linspace(0, 1, CHUNK)
+downramp = np.linspace(0.5, 0, CHUNK)
+upramp = np.linspace(0, 0.5, CHUNK)
 #fadein() applies fade-in to a buffer
 def fadein(buffer):
     np.multiply(buffer, upramp, out = buffer, casting = 'unsafe')

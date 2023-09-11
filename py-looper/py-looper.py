@@ -983,13 +983,43 @@ class Track(tk.Tk):
                 self.update_volume_bar(activeTrack)
         
     def writeTrack(self, filename, buffer):
-
         waveFile = wave.open(filename, 'wb')
         waveFile.setnchannels(looper.CHANNELS)
         waveFile.setsampwidth(audio.get_sample_size(looper.FORMAT))
         waveFile.setframerate(looper.RATE)
         waveFile.writeframes(b''.join(buffer))
         waveFile.close()
+        
+    def plotWav(self, filename):
+        spf = wave.open(filename, "r")
+
+        # Extract Raw Audio from Wav File
+        sample_freq = spf.getframerate()
+        n_samples = spf.getnframes()
+        signal = spf.readframes(-1)
+
+        spf.close()
+        t_audio = n_samples/sample_freq
+        sig_array = np.frombuffer(signal, dtype=np.int16)
+        
+        #get just the left channel
+        sig_array_l = sig_array[::2])
+
+        times = np.linspace(0, t_audio, num=n_samples)
+
+
+        # If Stereo
+        if spf.getnchannels() == 2:
+            print("Just mono files")
+            sys.exit(0)
+
+        plt.figure(1)
+        plt.title("Signal Wave...")
+        plt.plot(times, sig_array)
+        plt.ylabel("Signal Wave")
+        plt.xlabel("Time (s)")
+        plt.xlim(0, t_audio)
+        plt.show()
         
         
 #create instance of the GUI
@@ -1119,8 +1149,15 @@ def looping_callback(in_data, frame_count, time_info, status):
                                  + loops[2].read().astype(np.int32)[:]
                                  + loops[3].read().astype(np.int32)[:]
                                  ), looper.output_volume, out= None, casting = 'unsafe').astype(np.int16)
-   
-	
+    
+    if looper.restart_fadein:
+        looper.fadein(play_buffer)
+    elif looper.stop_fadeout:
+        looper.fadeout(play_buffer)
+    
+    looper.restart_fadein = False
+    looper.stop_fadeout = False
+    
     #current buffer will serve as previous in next iteration
     prev_rec_buffer = np.copy(current_rec_buffer)
     #play mixed audio and move on to next iteration
