@@ -2,8 +2,8 @@
  /* 
  *  FILE    :   py-looper.py
  *  AUTHOR  :   Matt Joseph
- *  DATE    :   9/3/2023
- *  VERSION :   1.1.1
+ *  DATE    :   9/11/2023
+ *  VERSION :   1.1.2
  *  
  *
  *  DESCRIPTION
@@ -16,6 +16,7 @@
  *  1.0.1)  Converted RMS vol to DB so GUI is smoother
  *  1.1.0)  Added support to send serial message with LED state info ****Requires Arduino version 1.1.0 or newer****
  *  1.1.1)  Added fadein/fadeout to start/stop to try to prevent "popping" sounds cause by "digital cliff"
+ *  1.1.2)  Added ability to create audio waveform plot of each track
 '''
 
 import tkinter as tk
@@ -34,7 +35,6 @@ import audioop
 from math import log10
 import serial
 import wave
-
 import matplotlib.pyplot as plt
 
 
@@ -289,7 +289,7 @@ class Track(tk.Tk):
             self.btnReset.pack(pady=5)
         
             #Create PLOT button
-            self.btnPlot = ttk.Button(cntl_frame,text="PLOT", command=self.plotWav)
+            self.btnPlot = ttk.Button(cntl_frame,text="PLOT", command=self.wavPlot2)
             self.btnPlot.pack(pady=5)
         
 
@@ -991,21 +991,30 @@ class Track(tk.Tk):
                 self.update_volume_bar(activeTrack)
 
         
-        
-    def plotWav(self):
-        global wavFile
-        global play_buffer
-        
-        buffer = loops[0].audio[:looper.LENGTH:]
-        
-        waveFile = wave.open(wavFile, 'wb')
+    def saveWav(self, filename, buffer):
+        waveFile = wave.open(filename, 'wb')
         waveFile.setnchannels(looper.CHANNELS)
         waveFile.setsampwidth(pa.get_sample_size(looper.FORMAT))
         waveFile.setframerate(looper.RATE)
         waveFile.writeframes(b''.join(buffer))
         waveFile.close()
+    
         
-        spf = wave.open(wavFile, "r")
+    def wavPlot2(self):
+        buffer = loops[0].audio[:looper.LENGTH:]
+        self.saveWav('./track1', buffer)
+        
+        buffer = loops[1].audio[:looper.LENGTH:]
+        self.saveWav('./track2', buffer)
+        
+        buffer = loops[2].audio[:looper.LENGTH:]
+        self.saveWav('./track3', buffer)
+        
+        buffer = loops[3].audio[:looper.LENGTH:]
+        self.saveWav('./track4', buffer)
+        
+        
+        spf = wave.open('./track1', "r")
 
         # Extract Raw Audio from Wav File
         sample_freq = spf.getframerate()
@@ -1014,23 +1023,61 @@ class Track(tk.Tk):
 
         spf.close()
         t_audio = n_samples/sample_freq
-        sig_array = np.frombuffer(signal, dtype=np.int16)
+        track1 = np.frombuffer(signal, dtype=np.int16)
+        
+        spf = wave.open('./track2', "r")
+        signal = spf.readframes(-1)
+        spf.close()
+        track2 = np.frombuffer(signal, dtype=np.int16)
+        
+        spf = wave.open('./track3', "r")
+        signal = spf.readframes(-1)
+        spf.close()
+        track3 = np.frombuffer(signal, dtype=np.int16)
+        
+        spf = wave.open('./track4', "r")
+        signal = spf.readframes(-1)
+        spf.close()
+        track4 = np.frombuffer(signal, dtype=np.int16)
+        
         
         #get just the left channel
-        sig_array_l = sig_array[::2]
+        track1_l = track1[::2]
+        track2_l = track2[::2]
+        track3_l = track3[::2]
+        track4_l = track4[::2]
 
         times = np.linspace(0, t_audio, num=n_samples)
-
-        plt.figure(1)
-        plt.title("Signal Wave...")
-        plt.plot(times, sig_array_l)
-        plt.ylabel("Signal Wave")
-        plt.xlabel("Time (s)")
-        plt.xlim(0, t_audio)
-        #plt.show()
+        
+        fig, axs = plt.subplots(3,2)
+        fig.suptitle('Audio Waveforms')
+        axs[0,0].plot(times, track1_l, 'tab:blue')
+        axs[0,0].set_title('Track 1')
+        #axs[0,0].set_ylim([-30000, 30000])
+       
+        axs[0,1].plot(times, track2_l, 'tab:red')
+        axs[0,1].set_title('Track 2')
+        #axs[0,1].set_ylim([-30000, 30000])
+        
+        axs[1,0].plot(times, track3_l, 'tab:green')
+        axs[1,0].set_title('Track 3')
+        #axs[1,0].set_ylim([-30000, 30000])
+        
+        axs[1,1].plot(times, track4_l, 'tab:orange')
+        axs[1,1].set_title('Track 4')
+        #axs[1,1].set_ylim([-30000, 30000])
+        
+        axs[2,0].plot(times, track1_l, 'tab:blue')
+        axs[2,0].plot(times, track2_l, 'tab:red')
+        axs[2,0].plot(times, track3_l, 'tab:green')
+        axs[2,0].plot(times, track4_l, 'tab:orange')
+        #axs[2,0].set_ylim([-30000, 30000])
+        figManager = plt.get_current_fig_manager()
+        figManager.window.showMaximized()
+        fig.tight_layout()
+        
         plt.savefig("mygraph.png")
-        
-        
+            
 #create instance of the GUI
 app = Track()
 
