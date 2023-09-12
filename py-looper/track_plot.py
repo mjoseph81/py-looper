@@ -67,6 +67,7 @@ def wavPlot():
         axs[1,1].set_title('Track 4')
         #axs[1,1].set_ylim([-30000, 30000])
         
+        axs[2,0].set_title('Combined')
         axs[2,0].plot(times, track1_l, 'tab:blue')
         axs[2,0].plot(times, track1_r, 'tab:blue')
         axs[2,0].plot(times, track2_l, 'tab:red')

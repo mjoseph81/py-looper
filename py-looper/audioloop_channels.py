@@ -70,8 +70,8 @@ stop_fadeout = False
 
 
 #multiplying by upramp and downramp gives fade-in and fade-out
-downramp = np.linspace(0.5, 0, CHUNK)
-upramp = np.linspace(0, 0.5, CHUNK)
+downramp = np.linspace(0.8, 0, CHUNK)
+upramp = np.linspace(0, 0.8, CHUNK)
 #fadein() applies fade-in to a buffer
 def fadein(buffer):
     np.multiply(buffer, upramp, out = buffer, casting = 'unsafe')
@@ -130,6 +130,8 @@ class audioloop:
         else:
             self.readp = self.readp + 1
         self.writep = (self.writep + 1) % self.length
+        
+        
     #initialize() raises self.length to closest integer multiple of LENGTH and initializes read and write pointers
     def initialize(self):
         print('initialize called')
@@ -147,6 +149,7 @@ class audioloop:
         print('last buffer recorded ' + str(self.last_buffer_recorded))
         #crossfade
         fadeout(self.audio[self.last_buffer_recorded]) #fade out the last recorded buffer
+        fadein(self.audio[0]) #fade in first chunk
         preceding_buffer_copy = np.copy(self.preceding_buffer)
         #fadein(preceding_buffer_copy)
         self.audio[self.length - 1, :] += preceding_buffer_copy[:]
@@ -158,6 +161,8 @@ class audioloop:
         #debounce flags
         self.rec_just_pressed = False
         self.play_just_pressed = False
+        
+        
     #add_buffer() appends a new buffer unless loop is filled to MAXLENGTH
     #expected to only be called before initialization
     def add_buffer(self, data):
@@ -178,12 +183,15 @@ class audioloop:
         self.audio[self.length, :] = np.copy(buff)
         self.length = self.length + 1
     
+    
     def is_restarting(self):
         if not self.initialized:
             return False
         if self.readp == 0:
             return True
         return False
+    
+    
     #read() reads and returns a buffer of audio from the loop
     def read(self):
         #if not initialized do nothing
@@ -198,9 +206,10 @@ class audioloop:
         
         #if initialized and playing, read audio from the loop and increment pointers
         pos = self.readp
-        
-       
+               
         return(self.audio[pos, :])
+    
+    
     #dub() mixes an incoming buffer of audio with the one at writep
     def dub(self, data, fade_in = False, fade_out = False):
         if not self.initialized:
@@ -217,6 +226,13 @@ class audioloop:
                     
         datadump = np.copy(buff)
         self.audio[self.writep, :] = self.audio[self.writep, :] * 0.9 + datadump[:] * self.dub_ratio
+        
+        #if at the beginning or end of the buffer then crossfade
+        if self.writep == self.length-1:
+            self.fadeout(self.audio[self.writep, :])
+        elif self.writep == 0:
+            self.fadein(self.audio[self.writep, :])
+            
     #clear() clears the loop so that a new loop of the same or a different length can be recorded on the track
     def clear(self):
         self.audio = np.zeros([MAXLENGTH, CHUNK], dtype = np.int16)
@@ -235,11 +251,15 @@ class audioloop:
         self.peak_vol = 0
         self.loop_length = 0
         self.dub_ratio = 1.0
+        
+        
     def start_recording(self, previous_buffer):
         self.isrecording = True
         self.iswaiting = False
         self.preceding_buffer = np.copy(previous_buffer)
         self.record = True
+        
+        
     #Doubles the length of the loop and copies the contents
     def instant_multiply(self):
         #Track length can't be more than half the MAXLENGTH in order to multiply
@@ -249,10 +269,12 @@ class audioloop:
             self.length += self.length
         else:
             print('Loop exceeds max length to multiply')
+    
     def bouncewait_rec(self):
         self.rec_just_pressed = True
         time.sleep(debounce_length)
         self.rec_just_pressed = False
+    
     def bouncewait_play(self):
         self.play_just_pressed = True
         time.sleep(debounce_length)
